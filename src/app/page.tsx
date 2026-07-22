@@ -7,6 +7,11 @@ import { Newsletter } from "@/components/home/Newsletter";
 import { StaggerGroup, StaggerItem } from "@/components/ui/Reveal";
 import { HoverSpotlight } from "@/components/ui/HoverSpotlight";
 
+// Renderiza a cada request em vez de pré-renderizar no build. Isso desacopla o
+// deploy do banco (o build nunca falha por indisponibilidade) e mantém os
+// destaques refletindo estoque e preço atuais.
+export const dynamic = "force-dynamic";
+
 const USPS = [
   {
     icon: ShieldCheck,

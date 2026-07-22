@@ -6,7 +6,14 @@ import { Reveal } from "@/components/ui/Reveal";
 import { HoverSpotlight } from "@/components/ui/HoverSpotlight";
 
 export async function FeaturedCollections() {
-  const products = await getFeaturedProducts(4);
+  // A home é a página mais importante do site: se o banco estiver indisponível,
+  // é melhor renderizar o resto dela do que devolver erro na página inteira.
+  let products: Awaited<ReturnType<typeof getFeaturedProducts>> = [];
+  try {
+    products = await getFeaturedProducts(4);
+  } catch (error) {
+    console.error("Falha ao carregar os destaques da home:", error);
+  }
   if (products.length === 0) return null;
 
   return (
