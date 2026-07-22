@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+:root {
+  --c-background: #fffcf9;
+  --c-foreground: #241d18;
+  --c-surface: #ffffff;
+  --c-surface-muted: #fbf0ee;
+  --c-primary: #241d18;
+  --c-primary-foreground: #fffcf9;
+  --c-accent: #bb8a4d;
+  --c-accent-soft: #f0d9b8;
+  --c-accent-foreground: #241d18;
+  --c-secondary: #6b5f54;
+  --c-muted-foreground: #83766a;
+  --c-border: #eee2da;
+  --c-border-strong: #ddc9ba;
+  --c-destructive: #c2392f;
+  --c-ring: #bb8a4d;
+
+  /* Paleta viva usada apenas nos blobs de fundo animados */
+  --c-blob-rose: #f3b8c6;
+  --c-blob-peach: #f7cca3;
+  --c-blob-lavender: #cdbdec;
+  --c-blob-gold: #f2d78e;
+
+  --ease-elegant: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 180ms;
+  --duration-base: 320ms;
+  --duration-slow: 560ms;
+}
+
+/* Tema escuro disponível para alternância manual futura (data-theme="dark") */
+:root[data-theme='dark'] {
+  --c-background: #100e0a;
+  --c-foreground: #f3ede1;
+  --c-surface: #191510;
+  --c-surface-muted: #211c15;
+  --c-primary: #f3ede1;
+  --c-primary-foreground: #17140f;
+  --c-accent: #c9a25c;
+  --c-accent-soft: #7a6339;
+  --c-accent-foreground: #17140f;
+  --c-secondary: #b7ab90;
+  --c-muted-foreground: #a89c85;
+  --c-border: #322b20;
+  --c-border-strong: #46392a;
+  --c-destructive: #e5877e;
+  --c-ring: #c9a25c;
+}
+
+@theme inline {
+  --color-background: var(--c-background);
+  --color-foreground: var(--c-foreground);
+  --color-surface: var(--c-surface);
+  --color-surface-muted: var(--c-surface-muted);
+  --color-primary: var(--c-primary);
+  --color-primary-foreground: var(--c-primary-foreground);
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-accent-foreground: var(--c-accent-foreground);
+  --color-secondary: var(--c-secondary);
+  --color-muted-foreground: var(--c-muted-foreground);
+  --color-border: var(--c-border);
+  --color-border-strong: var(--c-border-strong);
+  --color-destructive: var(--c-destructive);
+  --color-ring: var(--c-ring);
+
+  --font-display: var(--font-display-serif);
+  --font-body: var(--font-sans-body);
+}
+
+* {
+  border-color: var(--c-border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--c-background);
+  color: var(--c-foreground);
+  font-family: var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--c-accent);
+  color: var(--c-accent-foreground);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--c-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border-strong);
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-ring);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: var(--font-display-serif), Georgia, serif;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Garante contraste correto em <select>/<option> nativos independente do tema do SO */
+select {
+  background-color: var(--c-surface);
+  color: var(--c-foreground);
+  color-scheme: light;
+}
+option {
+  background-color: var(--c-surface);
+  color: var(--c-foreground);
+}
+
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--duration-base) var(--ease-elegant);
+}
+.link-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Blobs de gradiente animados: dão vida e movimento de cor ao fundo.
+   Tamanho em % (relativo ao container posicionado), nunca vw, para não
+   estourar em containers menores como o da newsletter. */
+.ambient-blobs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.ambient-blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.65;
+  will-change: transform;
+}
+@media (min-width: 768px) {
+  .ambient-blob {
+    filter: blur(56px);
+  }
+}
+.ambient-blob--rose {
+  background: var(--c-blob-rose);
+  width: 55%;
+  height: 55%;
+  top: -18%;
+  right: -12%;
+  animation: blob-drift-a 10s ease-in-out infinite;
+}
+.ambient-blob--gold {
+  background: var(--c-blob-gold);
+  width: 42%;
+  height: 42%;
+  bottom: -16%;
+  left: -10%;
+  animation: blob-drift-b 12s ease-in-out infinite;
+}
+.ambient-blob--lavender {
+  background: var(--c-blob-lavender);
+  width: 36%;
+  height: 36%;
+  top: 32%;
+  left: 32%;
+  animation: blob-drift-c 14s ease-in-out infinite;
+}
+.ambient-blob--peach {
+  background: var(--c-blob-peach);
+  width: 32%;
+  height: 32%;
+  top: 4%;
+  left: 4%;
+  animation: blob-drift-a 11s ease-in-out infinite reverse;
+}
+
+@keyframes blob-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-24%, 26%) scale(1.25); }
+  66% { transform: translate(20%, -18%) scale(0.82); }
+}
+@keyframes blob-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(28%, -30%) scale(1.3); }
+}
+@keyframes blob-drift-c {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-32%, -64%) scale(1.35); }
+}
+
+/* Marquee de marcas: faixa em rolagem contínua */
+.marquee {
+  overflow: hidden;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  animation: marquee-scroll 26s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
