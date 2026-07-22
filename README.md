@@ -25,10 +25,12 @@ E-commerce de decants de perfumaria fina, com sede em Florianópolis/SC. Next.js
 
 ## Primeiros passos
 
+O projeto usa **PostgreSQL**. Para desenvolver localmente você pode criar um banco gratuito na nuvem (Neon ou Supabase) e usar a mesma connection string, ou rodar um Postgres local.
+
 ```bash
 npm install
-cp .env.example .env      # ajuste os valores conforme necessário
-npm run db:migrate        # cria o banco SQLite local
+cp .env.example .env      # cole sua DATABASE_URL do Postgres
+npm run db:migrate        # cria as tabelas
 npm run db:seed           # popula produtos + usuário admin
 npm run dev                # http://localhost:3000
 ```
@@ -46,6 +48,7 @@ Login do admin (via seed): e-mail e senha definidos em `ADMIN_EMAIL` / `ADMIN_PA
 | `npm run db:seed` | Repopula o catálogo (apaga pedidos/produtos existentes) |
 | `npm run db:studio` | Abre o Prisma Studio para inspecionar o banco |
 | `npm run db:reset` | Reseta o banco do zero e roda o seed |
+| `npm run db:deploy` | Aplica migrations em produção (não cria novas) |
 
 ## Variáveis de ambiente
 
@@ -63,14 +66,11 @@ Veja `.env.example`. As mais importantes:
 4. Configure a notificação (webhook) para `https://SEU-DOMINIO/api/webhooks/mercadopago` no painel do Mercado Pago (ou deixe o `notification_url` enviado automaticamente na criação da preferência cuidar disso)
 5. Teste um pedido completo com um comprador de teste antes de trocar para credenciais de produção
 
-## Banco de dados em produção
+## Banco de dados
 
-O projeto usa SQLite localmente para simplicidade. Para produção:
+O projeto usa **PostgreSQL** em qualquer ambiente (via `@prisma/adapter-pg`). Não use SQLite na Vercel: o filesystem é efêmero e os pedidos seriam perdidos a cada invocação.
 
-1. Troque o `provider` em `prisma/schema.prisma` para `postgresql` (ou outro suportado)
-2. Troque o driver adapter em `src/lib/prisma.ts` e `prisma/seed.ts` para o adapter correspondente (ex: `@prisma/adapter-pg`)
-3. Atualize `DATABASE_URL` no ambiente de produção
-4. Rode `npx prisma migrate deploy` no ambiente de produção
+Provedores gratuitos que funcionam bem: [Neon](https://neon.tech), [Supabase](https://supabase.com) ou o Postgres do Marketplace da própria Vercel.
 
 ## Substituindo a arte dos frascos por fotos reais
 
@@ -80,15 +80,78 @@ Como ainda não há fotos dos produtos, cada perfume usa uma ilustração vetori
 2. Faça upload das fotos (ex: Vercel Blob, S3, Cloudinary) e salve a URL no produto via painel admin (será necessário adicionar o campo ao formulário em `src/components/admin/ProductForm.tsx`)
 3. Troque `<BottleArt />` por `<Image src={product.imageUrl} ... />` (componente `next/image`) nos locais relevantes (`ProductCard`, página de produto, `CartDrawer`)
 
-## Deploy
+## Deploy na Vercel (passo a passo)
 
-Recomendado: [Vercel](https://vercel.com) (mesma equipe do Next.js).
+> **Ordem importa.** A home e o sitemap são pré-renderizados no build e consultam o banco.
+> Se você mandar pra Vercel antes de criar as tabelas, **o build falha**.
+> Por isso os passos 1 e 2 vêm antes do deploy.
 
-1. Suba o repositório para o GitHub/GitLab
-2. Importe o projeto na Vercel
-3. Configure as variáveis de ambiente de produção (não copie o `.env` de desenvolvimento)
-4. Configure um banco Postgres gerenciado (ex: Vercel Postgres, Neon, Supabase) — veja seção acima
-5. Configure um domínio próprio (ex: `grassenceparfums.com.br`)
+### 1. Criar o banco Postgres
+
+Crie um projeto no [Neon](https://neon.tech) (ou Supabase) e copie a **connection string**. Ela se parece com:
+
+```
+postgresql://usuario:senha@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+```
+
+### 2. Criar as tabelas e popular o catálogo
+
+Ainda na sua máquina, com a string do banco **de produção** no `.env`:
+
+```bash
+npm run db:migrate
+```
+
+```bash
+npm run db:seed
+```
+
+Isso cria as tabelas e insere os 55 perfumes + o usuário admin. Confira em `npm run db:studio`.
+
+### 3. Subir o código para o GitHub
+
+O repositório git já está iniciado com o primeiro commit. Crie um repositório vazio no GitHub e:
+
+```bash
+git remote add origin https://github.com/SEU-USUARIO/grassence-parfums.git
+```
+
+```bash
+git push -u origin master
+```
+
+### 4. Importar na Vercel
+
+Em [vercel.com/new](https://vercel.com/new), importe o repositório. A Vercel detecta Next.js sozinha — não mude Build Command nem Output Directory.
+
+### 5. Configurar as variáveis de ambiente
+
+Em **Settings → Environment Variables**, adicione (marque Production, Preview e Development):
+
+| Variável | Valor |
+|---|---|
+| `DATABASE_URL` | a connection string do passo 1 |
+| `SESSION_SECRET` | gere com `openssl rand -base64 32` |
+| `NEXT_PUBLIC_SITE_URL` | `https://seu-projeto.vercel.app` (sem barra no final) |
+| `MERCADOPAGO_ACCESS_TOKEN` | seu Access Token |
+| `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | sua Public Key |
+
+`ADMIN_EMAIL`, `ADMIN_NAME` e `ADMIN_PASSWORD` só são usados pelo seed (que você já rodou localmente), então não precisam ir para a Vercel.
+
+### 6. Deploy
+
+Clique em **Deploy**. O build roda `prisma generate && next build`.
+
+### 7. Ajustes pós-deploy
+
+1. Se configurar domínio próprio, **atualize `NEXT_PUBLIC_SITE_URL`** e faça um redeploy — senão o retorno do Mercado Pago aponta pro domínio antigo.
+2. No painel do Mercado Pago, aponte o webhook para `https://SEU-DOMINIO/api/webhooks/mercadopago`.
+3. Faça um pedido de teste completo (sandbox) e confirme que ele aparece em `/admin/pedidos`.
+4. **Troque a senha do admin** se ainda estiver a padrão do seed.
+
+### Atualizações futuras
+
+Todo `git push` para a branch principal dispara um novo deploy automático. Se mudar o `schema.prisma`, rode `npm run db:migrate` local (gera a migration), commite, e depois rode `npm run db:deploy` apontando para o banco de produção.
 
 ## Limitações conhecidas / próximos passos
 
